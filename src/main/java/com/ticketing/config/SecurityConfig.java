@@ -10,36 +10,47 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
-    private SecurityService securityService;
 
-    public SecurityConfig(SecurityService securityService) {
+    private SecurityService securityService;
+    private AuthSuccessHandler authSuccessHandler;
+
+    public SecurityConfig(SecurityService securityService, AuthSuccessHandler authSuccessHandler) {
         this.securityService = securityService;
+        this.authSuccessHandler = authSuccessHandler;
     }
+
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+
         http
                 .authorizeRequests()
-                .antMatchers("/",
-                                        "/login",
-                                        "/fragments/**",
-                                        "/assets/**",
-                                        "/images?**")
-                .permitAll()
+                .antMatchers("/user/**").hasAuthority("Admin")
+                .antMatchers("/project/**").hasAuthority("Manager")
+                .antMatchers("/task/employee/**").hasAuthority("Employee")
+                .antMatchers("/task/**").hasAuthority("Manager")
+                .antMatchers(
+                        "/",
+                        "/login",
+                        "/fragments/**",
+                        "/assets/**",
+                        "/images/**"
+                ).permitAll()
                 .and()
                 .formLogin()
-                                .loginPage("/login")
-                                .defaultSuccessUrl("/welcome")
-                                .failureUrl("/login?error=true")
-                                .permitAll()
+                .loginPage("/login")
+//                    .defaultSuccessUrl("/welcome")
+                .successHandler(authSuccessHandler)
+                .failureUrl("/login?error=true")
+                .permitAll()
                 .and()
                 .logout()
-                                .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
-                                .logoutSuccessUrl("/login")
+                .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
+                .logoutSuccessUrl("/login")
                 .and()
                 .rememberMe()
-                                .tokenValiditySeconds(120)
-                                .key("cybertekService")
-                                .userDetailsService(securityService);
+                .tokenValiditySeconds(120)
+                .key("cybertekSecret")
+                .userDetailsService(securityService);
     }
 }
