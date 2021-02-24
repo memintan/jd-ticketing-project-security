@@ -1,7 +1,6 @@
 package com.ticketing.entitiy.common;
 
 import com.ticketing.entitiy.User;
-import jdk.dynalink.linker.LinkerServices;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
