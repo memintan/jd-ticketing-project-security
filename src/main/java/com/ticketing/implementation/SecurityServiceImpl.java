@@ -21,9 +21,11 @@ public class SecurityServiceImpl implements SecurityService {
     public UserDetails loadUserByUsername(String s) throws UsernameNotFoundException {
 
         User user = userRepository.findByUserName(s);
-        if (user==null){
+
+        if(user==null){
             throw new UsernameNotFoundException("This user does not exists");
         }
+
         return new UserPrincipal(user);
     }
 }
