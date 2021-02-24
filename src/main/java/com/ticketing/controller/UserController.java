@@ -1,11 +1,10 @@
 package com.ticketing.controller;
 
-import com.ticketing.dto.RoleDTO;
 import com.ticketing.dto.UserDTO;
+import com.ticketing.exception.TicketingProjectException;
 import com.ticketing.service.RoleService;
 import com.ticketing.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.Banner;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,35 +24,23 @@ public class UserController {
     @GetMapping("/create")
     public String createUser(Model model){
         model.addAttribute("user", new UserDTO());
-        model.addAttribute("roles", roleService.findAll());
-        model.addAttribute("users", userService.findAll());
-
-        //dataGenerator
-        //
-
+        model.addAttribute("roles", roleService.listAllRoles());
+        model.addAttribute("users", userService.listAllUsers());
         return "/user/create";
     }
 
     @PostMapping("/create")
     public String insertUser(UserDTO user, Model model){
-
         userService.save(user);
-
-        //I need user, roles, users
-//        model.addAttribute("user", new UserDTO());
-//        model.addAttribute("roles", roleService.findAll());
-//        model.addAttribute("users", roleService.findAll());
-
         return "redirect:/user/create";
-
     }
 
     @GetMapping("/update/{username}")
     public String editUser(@PathVariable("username") String username, Model model){
 
-        model.addAttribute("user",userService.findById(username));
-        model.addAttribute("users",userService.findAll());
-        model.addAttribute("roles",roleService.findAll());
+        model.addAttribute("user",userService.findByUserName(username));
+        model.addAttribute("users",userService.listAllUsers());
+        model.addAttribute("roles",roleService.listAllRoles());
 
         return "/user/update";
     }
@@ -65,8 +52,8 @@ public class UserController {
     }
 
     @GetMapping("/delete/{username}")
-    public String deleteUser(@PathVariable("username") String username){
-        userService.deleteById(username);
+    public String deleteUser(@PathVariable("username") String username) throws TicketingProjectException {
+        userService.delete(username);
         return "redirect:/user/create";
     }
 

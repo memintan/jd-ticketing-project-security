@@ -1,54 +1,113 @@
 package com.ticketing.implementation;
 
+import com.ticketing.dto.ProjectDTO;
+import com.ticketing.dto.TaskDTO;
 import com.ticketing.dto.UserDTO;
+import com.ticketing.entitiy.User;
+import com.ticketing.exception.TicketingProjectException;
+import com.ticketing.mapper.MapperUtil;
+import com.ticketing.repository.UserRepository;
+import com.ticketing.service.ProjectService;
+import com.ticketing.service.TaskService;
 import com.ticketing.service.UserService;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class UserServiceImpl extends AbstractMapService<UserDTO,String> implements UserService {
+public class UserServiceImpl implements UserService {
 
-    @Override
-    public List<UserDTO> findAll() {
-        return super.findAll();
+
+    private UserRepository userRepository;
+    private ProjectService projectService;
+    private TaskService taskService;
+    private MapperUtil mapperUtil;
+
+    public UserServiceImpl(UserRepository userRepository, @Lazy ProjectService projectService, TaskService taskService, MapperUtil mapperUtil) {
+        this.userRepository = userRepository;
+        this.projectService = projectService;
+        this.taskService = taskService;
+        this.mapperUtil = mapperUtil;
     }
 
     @Override
-    public void deleteById(String id) {
-        super.deleteById(id);
+    public List<UserDTO> listAllUsers() {
+        List<User> list = userRepository.findAll(Sort.by("firstName"));
+
+        //return list.stream().map(obj -> {return mapperUtil.convert(obj, new UserDTO());}).collect(Collectors.toList());
+        return list.stream().map(obj -> {return mapperUtil.convert(obj, new UserDTO());}).collect(Collectors.toList());
     }
 
     @Override
-    public void delete(UserDTO object) {
-        super.delete(object);
+    public UserDTO findByUserName(String username) {
+        User user = userRepository.findByUserName(username);
+        return mapperUtil.convert(user, new UserDTO());
     }
 
     @Override
-    public UserDTO findById(String id) {
-        return super.findById(id);
+    public void save(UserDTO dto) {
+        User obj = mapperUtil.convert(dto, new User());
+        userRepository.save(obj);
     }
 
     @Override
-    public UserDTO save(UserDTO object) {
-        return super.save(object.getUserName(),object);
+    public UserDTO update(UserDTO dto) {
+        //1->find current user
+        User user = userRepository.findByUserName(dto.getUserName());
+        //2->map update user dto to entity object
+        User convertUser = mapperUtil.convert(dto, new User());
+        //3->set id to the converted object
+        convertUser.setId(user.getId());
+        //4-> save updated user
+        userRepository.save(convertUser);
+        return findByUserName(dto.getUserName());
     }
 
     @Override
-    public void update(UserDTO object) {
+    public void delete(String username) throws TicketingProjectException {
+        User user = userRepository.findByUserName(username);
+        if (user == null){
+            throw new TicketingProjectException("User Does not Exists");
+        }
+        if (!checkIfUserCanBeDeleted(user)){
+            throw new TicketingProjectException("User can not be deleted. It is linked by a project or task");
+        }
 
-        super.update(object.getUserName(),object);
+        user.setUserName(user.getUserName() + "-" + user.getId());
 
+        user.setIsDeleted(true);
+        userRepository.save(user);
+    }
+
+    //hard delete
+    @Override
+    public void deleteByUserName(String username) {
+        userRepository.deleteByUserName(username);
     }
 
     @Override
-    public List<UserDTO> findManagers() {
-        return super.findAll().stream().filter(user -> user.getRole().getId() == 2).collect(Collectors.toList());
+    public List<UserDTO> listAllByRole(String role) {
+
+        List<User> users = userRepository.findAllByRoleDescriptionIgnoreCase(role);
+
+        return users.stream().map(obj -> {return mapperUtil.convert(obj, new UserDTO());}).collect(Collectors.toList());
     }
 
     @Override
-    public List<UserDTO> findEmployees() {
-        return super.findAll().stream().filter(user -> user.getRole().getId() == 3).collect(Collectors.toList());
+    public Boolean checkIfUserCanBeDeleted(User user) {
+        switch (user.getRole().getDescription()){
+            case"Manager":
+                List<ProjectDTO> projectList = projectService.readAllByAssignedManager(user);
+                return projectList.size() == 0;
+            case "Employee":
+                List<TaskDTO> taskList = taskService.readAllByEmployee(user);
+                return  taskList.size() == 0;
+            default:
+                return true;
+        }
+
     }
 }

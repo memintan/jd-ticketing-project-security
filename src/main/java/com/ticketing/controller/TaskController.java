@@ -5,7 +5,6 @@ import com.ticketing.enums.Status;
 import com.ticketing.service.ProjectService;
 import com.ticketing.service.TaskService;
 import com.ticketing.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,27 +12,30 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.time.LocalDate;
-import java.util.UUID;
+import java.util.List;
 
 @Controller
 @RequestMapping("/task")
 public class TaskController {
 
-    @Autowired
+
     ProjectService projectService;
-    @Autowired
     UserService userService;
-    @Autowired
     TaskService taskService;
+
+    public TaskController(ProjectService projectService, UserService userService, TaskService taskService) {
+        this.projectService = projectService;
+        this.userService = userService;
+        this.taskService = taskService;
+    }
 
     @GetMapping("/create")
     public String createTask(Model model){
 
         model.addAttribute("task", new TaskDTO());
-        model.addAttribute("projects", projectService.findAll());
-        model.addAttribute("employees",userService.findAll());
-        model.addAttribute("tasks", taskService.findAll());
+        model.addAttribute("projects", projectService.listAllProjects());
+        model.addAttribute("employees",userService.listAllByRole("employee"));
+        model.addAttribute("tasks", taskService.listAllTasks());
 
 
         return "task/create";
@@ -41,21 +43,13 @@ public class TaskController {
 
     @PostMapping("/create")
     public String insertTask(Model model, TaskDTO task ){
-
-        task.setTaskStatus(Status.OPEN);
-        task.setAssignedDate(LocalDate.now());
-        task.setId(UUID.randomUUID().getMostSignificantBits());
-
-        System.out.println("Auto generated ID => " + task.getId());
         taskService.save(task);
-
-
         return "redirect:/task/create";
     }
 
     @GetMapping("/delete/{id}")
     public String deleteTask(@PathVariable("id") Long id) {
-        taskService.deleteById(id);
+        taskService.delete(id);
         return "redirect:/task/create";
     }
 
@@ -63,9 +57,9 @@ public class TaskController {
     public String editTask(@PathVariable("id") Long id,Model model){
 
         model.addAttribute("task",taskService.findById(id));
-        model.addAttribute("projects",projectService.findAll());
-        model.addAttribute("employees",userService.findEmployees());
-        model.addAttribute("tasks",taskService.findAll());
+        model.addAttribute("projects",projectService.listAllProjects());
+        model.addAttribute("employees",userService.listAllByRole("employee"));
+        model.addAttribute("tasks",taskService.listAllTasks());
 
         return "task/update";
     }
@@ -77,5 +71,46 @@ public class TaskController {
 
         return "redirect:/task/create";
 
+    }
+
+    @GetMapping("/employee")
+    public String edit(Model model){
+
+        List<TaskDTO> tasks = taskService.listAllTasksByStatusIsNot(Status.COMPLETE);
+        model.addAttribute("tasks",tasks);
+
+        return "task/employee-tasks";
+
+    }
+
+    @GetMapping("/employee/edit/{id}")
+    public String employee_update(@PathVariable("id") Long id,Model model){
+
+        TaskDTO task = taskService.findById(id);
+        List<TaskDTO> tasks = taskService.listAllTasksByStatusIsNot(Status.COMPLETE);
+
+
+        model.addAttribute("task",task);
+        model.addAttribute("users",userService.listAllByRole("employee"));
+        model.addAttribute("projects",projectService.listAllProjects());
+        model.addAttribute("tasks",tasks);
+        model.addAttribute("statuses",Status.values());
+
+        return "task/employee-update";
+
+    }
+
+    @PostMapping("/employee/update/{id}")
+    public String employee_update(@PathVariable("id") Long id,TaskDTO taskDTO){
+        taskService.updateStatus(taskDTO);
+        return "redirect:/task/employee";
+    }
+
+    @GetMapping("/employee/archive")
+    public String employee_archieve(Model model){
+
+        List<TaskDTO> tasks = taskService.listAllTasksByStatus(Status.COMPLETE);
+        model.addAttribute("tasks",tasks);
+        return "task/employee-archive";
     }
 }

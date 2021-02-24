@@ -1,22 +1,22 @@
 package com.ticketing.service;
 
+
 import com.ticketing.dto.UserDTO;
+import com.ticketing.entitiy.User;
+import com.ticketing.exception.TicketingProjectException;
 
 import java.util.List;
 
-public interface UserService extends CrudService<UserDTO,String> {
+public interface UserService {
+    List<UserDTO> listAllUsers();
+    UserDTO findByUserName (String username);
+    void save(UserDTO dto);
+    UserDTO update(UserDTO dto);
+    void delete(String username) throws TicketingProjectException;
 
-    List<UserDTO> findManagers();
-    List<UserDTO> findEmployees();
+    void deleteByUserName(String username);
 
+    List<UserDTO> listAllByRole(String role);
 
-    //save
-    //findBy user by username
-    //give me all user list
-    //delete
-//    UserDTO save(UserDTO user);
-//    UserDTO findById(String username);
-//    List<UserDTO> findAll();
-//    void delete (UserDTO user);
-//    void deleteById(String username);
+    Boolean checkIfUserCanBeDeleted(User user);
 }
